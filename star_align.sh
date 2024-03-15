@@ -1,7 +1,8 @@
 
 #!/bin/bash
 
-# Initialize variables
+# BELOW ARE MORE VARIABLES!!
+# Initialize Sample variable (this is modified by the flags used)
 SAMPLE=""
 
 # Manual parsing of command line arguments
@@ -26,7 +27,12 @@ if [ -z "$SAMPLE" ]; then
   exit 1
 fi
 
-ext_dir="/mnt/d/JorritvU/Tripolar/scRNA-seq/${SAMPLE}"
+ext_dir="/mnt/d/JorritvU/Tripolar/scRNA-seq/${SAMPLE}"  # the script extends this with /Fastq/*  --> Change the code below if this is unwanted behaviour
+ref_gi59="refgenome/Grch38/ensemble/indexHuman59"  
+ref_g38="refgenome/Grch38/ensemble/Homo_sapiens.GRCh38.gtf"
+bc_file="refgenome/Grch38/ensemble/Homo_sapiens.GRCh38.gtf"
+
+
 
 # Copy the merged fastq to current DIR
 echo "Copying $ext_dir/Fastq/*.fastq.gz.." 
@@ -38,8 +44,8 @@ ulimit -n 65535
 # Run STAR
 STAR --runMode alignReads \
 --runThreadN 32 \
---genomeDir refgenome/Grch38/ensemble/indexHuman59 \
---sjdbGTFfile refgenome/Grch38/ensemble/Homo_sapiens.GRCh38.gtf \
+--genomeDir $ref_gi59 \
+--sjdbGTFfile $ref_g38 \
 --sjdbOverhang 59 \
 --readFilesCommand zcat \
 --readFilesIn *R2_001.fastq.gz *R1_001.fastq.gz \
@@ -49,7 +55,7 @@ STAR --runMode alignReads \
 --soloUMIstart 1 \
 --soloUMIlen 6 \
 --soloBarcodeMate 2 \
---soloCBwhitelist barcodes2.txt \
+--soloCBwhitelist $bc_file \
 --outFilterScoreMinOverLread 0.5 \
 --outFilterMatchNminOverLread 0.5 \
 --outSAMtype BAM SortedByCoordinate \
