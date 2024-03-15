@@ -12,6 +12,7 @@ ref_genome=/mnt/d/JorritvU/refgenome/GRCh38/ensemble/ref_with_chr/Homo_sapiens.G
 ref_panel=/mnt/d/JorritvU/refgenome/1KG3/  # References panel, downloaded from recommended link
 Monopogen=/home/jorrit/Monopogen/src/Monopogen.py  # The Monopogen run file, runs on python
 OUTPUT=$PWD/processed/SNV  # Output folder
+bam_lst="processed/singleBAM/bam.lst"
 THREADS=12
 
 # If no index files present, create index
@@ -31,7 +32,7 @@ for bam in processed/singleBAM/*.bam; do
 done > processed/singleBAM/bam.lst
 
 # Preprocess the BAM files in bam.lst
-/home/jorrit/anaconda3/bin/python $Monopogen preProcess -b processed/singleBAM/bam.lst -a $apps -o $OUTPUT -t $THREADS
+/home/jorrit/anaconda3/bin/python $Monopogen preProcess -b $bam_lst -a $apps -o $OUTPUT -t $THREADS
 
 # Running germline variant calling
 /home/jorrit/anaconda3/bin/python $Monopogen germline -a $apps -t $THREADS -r $regions -p $ref_panel -g $ref_genome -m 3 -s all -o $OUTPUT
