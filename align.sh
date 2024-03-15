@@ -2,17 +2,12 @@
 set -e
 set -o pipefail
 
-# Run bowtie2
-# bowtie2 -p ${THREADS} \
-# -x ${ref} \
-# --local \
-# --no-unal \
-# --sensitive-local \
-# -N 1 \
-# -1 ${processed_dir}/trimmed.R1.fastq.gz \
-# -2 ${processed_dir}/trimmed.R2.fastq.gz \
-# -S processed/temp_aligned_reads.sam
-
+# Define variables
+sample="CHI-006"   # SAMPLE NAME
+ref="/mnt/d/JorritvU/refgenome/GRCh38/ensemble/Homo_sapiens.GRCh38.dna.primary_assembly"  # REFERENCE GENOME LOCATION
+processed_dir="processed/SCC-scNlaIII-EMC-${sample}"  # The directory where the FastQ files are
+scripts="/mnt/d/JorritvU/script/BuysDB"  # The location of the BuysDB (NLAIIIseq) pipeline
+THREADS=24  # N_THREADS to use
 tmp_dir="temp"
 
 # Set up date format for logging
@@ -42,45 +37,42 @@ execute_and_log() {
   log_and_echo "Completed $1 at $end_time"
 }
 
-# Define variables
-sample="CHI-006"
-ref="/mnt/d/JorritvU/refgenome/GRCh38/ensemble/Homo_sapiens.GRCh38.dna.primary_assembly"
-processed_dir="processed/SCC-scNlaIII-EMC-${sample}"
-scripts="/mnt/d/JorritvU/script/BuysDB"
-THREADS=24
 
-# Run bowtie2 (command commented out as an example)
-# log_and_echo "Aligning starts at $(date "$date_format")"
+log_and_echo "Aligning starts at $(date "$date_format")"
 
 # # Perform alignment and convert to BAM format while logging stderr
-# bwa mem -t ${THREADS} ${ref}.fa ${processed_dir}/trimmed.R1.fastq.gz ${processed_dir}/trimmed.R2.fastq.gz 2>>$log | \
-# samtools view -bS - > ${tmp_dir}/temp_aligned_reads.bam
+bwa mem -t ${THREADS} ${ref}.fa ${processed_dir}/trimmed.R1.fastq.gz ${processed_dir}/trimmed.R2.fastq.gz 2>>$log | \
+samtools view -bS - > ${tmp_dir}/temp_aligned_reads.bam
 
-# if [ $? -ne 0 ]; then
-#   log_and_echo "Error during alignment."
-#   exit 1
-# fi
+if [ $? -ne 0 ]; then
+  log_and_echo "Error during alignment."
+  exit 1
+fi
 
-# log_and_echo "Alignment completed at $(date "$date_format")"
+log_and_echo "Alignment completed at $(date "$date_format")"
 
-# execute_and_log java -jar /home/jorrit/picard.jar SortSam \
-#   INPUT=${tmp_dir}/temp_aligned_reads.bam \
-#   OUTPUT=${tmp_dir}/sorted.bam \
-#   SORT_ORDER=coordinate 
+execute_and_log java -jar /home/jorrit/picard.jar SortSam \
+  INPUT=${tmp_dir}/temp_aligned_reads.bam \
+  OUTPUT=${tmp_dir}/sorted.bam \
+  SORT_ORDER=coordinate 
 
-## Add or replace read groups
-# execute_and_log java -jar /home/jorrit/picard.jar AddOrReplaceReadGroups \
-#   I=${tmp_dir}/sorted.bam \
-#   O=${tmp_dir}/sorted.rg.bam \
-#   RGID=${sample} \
-#   RGLB=NlaIIIseq \
-#   RGPL=ILLUMINA \
-#   RGPU=BC \
-#   RGSM=${sample}
+# Add or replace read groups
+execute_and_log java -jar /home/jorrit/picard.jar AddOrReplaceReadGroups \
+  I=${tmp_dir}/sorted.bam \
+  O=${tmp_dir}/sorted.rg.bam \
+  RGID=${sample} \
+  RGLB=NlaIIIseq \
+  RGPL=ILLUMINA \
+  RGPU=BC \
+  RGSM=${sample}
 
-#execute_and_log java -jar /home/jorrit/picard.jar MarkDuplicates REMOVE_DUPLICATES=true I=${tmp_dir}/sorted.rg.bam O=${tmp_dir}/sorted.rg.dedup.bam METRICS_FILE=${tmp_dir}/sorted.rg.dedup.metrics.txt PROGRAM_RECORD_ID=MarkDuplicates PROGRAM_GROUP_VERSION=null PROGRAM_GROUP_NAME=MarkDuplicates
+# Mark duplicates and remove them
+execute_and_log java -jar /home/jorrit/picard.jar MarkDuplicates REMOVE_DUPLICATES=true I=${tmp_dir}/sorted.rg.bam O=${tmp_dir}/sorted.rg.dedup.bam METRICS_FILE=${tmp_dir}/sorted.rg.dedup.metrics.txt PROGRAM_RECORD_ID=MarkDuplicates PROGRAM_GROUP_VERSION=null PROGRAM_GROUP_NAME=MarkDuplicates
+
+# Create BAI (Bam index)
 execute_and_log java -jar /home/jorrit/picard.jar BuildBamIndex -I ${tmp_dir}/sorted.rg.dedup.bam -O ${tmp_dir}/sorted.rg.dedup.bai
 
+# Moving the files to final location
 log_and_echo "Moving files.. $(date "$date_format")"
 mv ${tmp_dir}/sorted.rg.dedup.bam ${processed_dir}/${sample}.bam
 mv ${tmp_dir}/sorted.rg.dedup.bai ${processed_dir}/${sample}.bai
