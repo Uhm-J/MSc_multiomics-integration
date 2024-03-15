@@ -1,4 +1,4 @@
-# MSc Multiomics-Integration Documentation
+# MSc Research Project
 
 ## Exploring Single Nucleotide Variants as shared features for unpaired Genome-Transcriptome integration
 
